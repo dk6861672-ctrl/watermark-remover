@@ -1,0 +1,1373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WaterDrop — Watermark Remover</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #080810;
+    --surface: #0f0f1c;
+    --card: #14142a;
+    --card2: #1c1c35;
+    --border: #252545;
+    --border2: #30305a;
+    --accent: #6c5ce7;
+    --accent2: #fd79a8;
+    --accent3: #00cec9;
+    --text: #e2e2f0;
+    --muted: #6868a0;
+    --success: #00b894;
+    --warning: #fdcb6e;
+    --glow: rgba(108, 92, 231, 0.35);
+    --glow2: rgba(253, 121, 168, 0.25);
+    --r: 14px;
+  }
+
+  body {
+    font-family: 'Space Grotesk', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 70% 50% at 15% 5%, rgba(108,92,231,0.1) 0%, transparent 55%),
+      radial-gradient(ellipse 50% 40% at 85% 95%, rgba(253,121,168,0.08) 0%, transparent 50%),
+      radial-gradient(ellipse 40% 30% at 50% 50%, rgba(0,206,201,0.04) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Grid pattern overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(108,92,231,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(108,92,231,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  header {
+    position: relative;
+    z-index: 10;
+    padding: 22px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(10px);
+    background: rgba(8,8,16,0.7);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: grid; place-items: center;
+    font-size: 17px;
+    box-shadow: 0 0 20px var(--glow);
+  }
+
+  .header-right { display: flex; align-items: center; gap: 12px; }
+
+  .badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    background: rgba(108,92,231,0.12);
+    border: 1px solid rgba(108,92,231,0.3);
+    color: var(--accent);
+    padding: 4px 10px;
+    border-radius: 20px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  .badge-green {
+    background: rgba(0,184,148,0.12);
+    border-color: rgba(0,184,148,0.3);
+    color: var(--success);
+  }
+
+  main {
+    position: relative;
+    z-index: 5;
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  .hero {
+    text-align: center;
+    margin-bottom: 44px;
+  }
+
+  .hero-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent3);
+    border: 1px solid rgba(0,206,201,0.25);
+    background: rgba(0,206,201,0.06);
+    padding: 5px 14px;
+    border-radius: 20px;
+    margin-bottom: 18px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .hero h1 {
+    font-size: clamp(30px, 5vw, 52px);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -1.5px;
+    margin-bottom: 14px;
+  }
+
+  .hero h1 span {
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .hero p {
+    color: var(--muted);
+    font-size: 15px;
+    font-weight: 400;
+    max-width: 480px;
+    margin: 0 auto;
+    line-height: 1.65;
+  }
+
+  /* Steps */
+  .steps {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin-bottom: 36px;
+    flex-wrap: wrap;
+    row-gap: 12px;
+  }
+
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    transition: color 0.3s;
+  }
+
+  .step.active { color: var(--accent); }
+  .step.done { color: var(--success); }
+
+  .step-num {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--card);
+    border: 2px solid var(--border);
+    display: grid; place-items: center;
+    font-size: 11px;
+    transition: all 0.3s;
+  }
+
+  .step.active .step-num {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+    box-shadow: 0 0 14px var(--glow);
+  }
+
+  .step.done .step-num {
+    background: var(--success);
+    border-color: var(--success);
+    color: #000;
+  }
+
+  .step-arrow { color: var(--border2); margin: 0 10px; }
+
+  /* Upload zone */
+  #upload-zone {
+    border: 2px dashed var(--border2);
+    border-radius: 20px;
+    padding: 64px 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    background: var(--surface);
+    position: relative;
+    overflow: hidden;
+  }
+
+  #upload-zone::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(108,92,231,0.07), rgba(253,121,168,0.04));
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  #upload-zone:hover, #upload-zone.drag-over {
+    border-color: var(--accent);
+    box-shadow: 0 0 40px var(--glow);
+  }
+
+  #upload-zone:hover::before, #upload-zone.drag-over::before { opacity: 1; }
+
+  .upload-icon { font-size: 56px; margin-bottom: 16px; display: block; filter: drop-shadow(0 0 14px var(--glow)); }
+
+  #upload-zone h3 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  #upload-zone p { color: var(--muted); font-size: 13px; }
+
+  .upload-formats {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+
+  .format-chip {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    background: var(--card);
+    border: 1px solid var(--border2);
+    color: var(--muted);
+  }
+
+  .upload-btn {
+    display: inline-block;
+    margin-top: 22px;
+    padding: 13px 30px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 24px var(--glow);
+    color: white;
+  }
+
+  .upload-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 32px var(--glow); }
+
+  /* Editor area */
+  #editor-area { display: none; gap: 20px; flex-direction: column; }
+  #editor-area.visible { display: flex; }
+
+  .video-canvas-wrapper {
+    position: relative;
+    background: #000;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    box-shadow: 0 0 50px rgba(0,0,0,0.6);
+  }
+
+  #video-el {
+    display: block;
+    width: 100%;
+    max-height: 480px;
+    object-fit: contain;
+  }
+
+  #selection-canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    cursor: crosshair;
+  }
+
+  .selection-indicator {
+    position: absolute;
+    border: 2px dashed var(--accent2);
+    background: rgba(253,121,168,0.12);
+    pointer-events: none;
+    display: none;
+    border-radius: 4px;
+    box-shadow: 0 0 0 1px rgba(253,121,168,0.3), inset 0 0 20px rgba(253,121,168,0.08);
+  }
+
+  /* Corner handles on selection */
+  .sel-corner {
+    position: absolute;
+    width: 10px; height: 10px;
+    background: var(--accent2);
+    border-radius: 2px;
+  }
+  .sel-corner.tl { top: -2px; left: -2px; }
+  .sel-corner.tr { top: -2px; right: -2px; }
+  .sel-corner.bl { bottom: -2px; left: -2px; }
+  .sel-corner.br { bottom: -2px; right: -2px; }
+
+  /* Controls */
+  .controls-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 20px;
+  }
+
+  .panel-title {
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .panel-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .info-panel { flex: 1; min-width: 260px; }
+
+  .coords {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+    line-height: 1.8;
+    background: var(--surface);
+    border-radius: 8px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    min-height: 52px;
+  }
+
+  /* Method selector — improved */
+  .method-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .method-btn {
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1.5px solid var(--border2);
+    background: var(--surface);
+    color: var(--muted);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+    line-height: 1.3;
+  }
+
+  .method-btn .method-icon { font-size: 16px; display: block; margin-bottom: 4px; }
+  .method-btn .method-label { display: block; font-size: 11px; color: var(--muted); font-weight: 400; margin-top: 2px; }
+
+  .method-btn:hover { border-color: var(--accent); color: var(--text); }
+
+  .method-btn.selected {
+    border-color: var(--accent);
+    background: rgba(108,92,231,0.12);
+    color: var(--text);
+    box-shadow: 0 0 12px var(--glow);
+  }
+
+  .method-btn.selected .method-label { color: var(--accent); }
+
+  /* Intensity slider */
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .slider-label {
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    flex: 1;
+    height: 4px;
+    background: var(--border2);
+    border-radius: 99px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--glow);
+    cursor: pointer;
+  }
+
+  .slider-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    min-width: 28px;
+    text-align: right;
+  }
+
+  /* Action buttons */
+  .actions-panel { display: flex; flex-direction: column; gap: 10px; min-width: 200px; }
+
+  .action-btn {
+    padding: 13px 24px;
+    border-radius: 12px;
+    border: none;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: -0.2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    white-space: nowrap;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #a855f7);
+    color: white;
+    box-shadow: 0 4px 20px var(--glow);
+  }
+
+  .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 32px var(--glow); }
+  .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  .btn-secondary {
+    background: var(--card2);
+    color: var(--text);
+    border: 1.5px solid var(--border2);
+  }
+
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+  .btn-success {
+    background: linear-gradient(135deg, #00b894, #00cec9);
+    color: white;
+    box-shadow: 0 4px 20px rgba(0,184,148,0.3);
+  }
+
+  .btn-success:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0,184,148,0.4); }
+
+  .btn-danger {
+    background: var(--card2);
+    color: #ff7675;
+    border: 1.5px solid rgba(255,118,117,0.3);
+  }
+
+  .btn-danger:hover { border-color: #ff7675; background: rgba(255,118,117,0.08); }
+
+  .reset-link {
+    background: none; border: none;
+    color: var(--muted);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    margin-top: 6px;
+    text-align: center;
+  }
+
+  .reset-link:hover { color: var(--text); }
+
+  /* Status */
+  .status-msg {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent3);
+    margin-top: 10px;
+    min-height: 16px;
+  }
+
+  /* Tip box */
+  .tip-box {
+    background: rgba(0,206,201,0.05);
+    border: 1px solid rgba(0,206,201,0.18);
+    border-radius: 10px;
+    padding: 13px 18px;
+    font-size: 13px;
+    color: var(--muted);
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    line-height: 1.55;
+  }
+
+  .tip-icon { color: var(--accent3); font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+  /* Progress */
+  #progress-wrap {
+    display: none;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 28px;
+  }
+
+  #progress-wrap.visible { display: block; }
+
+  .progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+
+  .progress-title { font-size: 14px; font-weight: 700; color: var(--text); }
+
+  #prog-pct {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--accent);
+  }
+
+  #prog-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 10px;
+    display: block;
+  }
+
+  .progress-bar-bg {
+    height: 6px;
+    background: var(--surface);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 99px;
+    width: 0%;
+    transition: width 0.15s linear;
+    box-shadow: 0 0 10px var(--glow);
+  }
+
+  .progress-tips {
+    margin-top: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .progress-tip-chip {
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 6px;
+  }
+
+  /* Result */
+  #result-area {
+    display: none;
+    background: var(--card);
+    border: 1px solid rgba(0,184,148,0.25);
+    border-radius: 20px;
+    padding: 28px;
+    text-align: center;
+  }
+
+  #result-area.visible { display: block; }
+
+  .result-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+
+  .result-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 14px;
+    background: rgba(0,184,148,0.1);
+    border: 1px solid rgba(0,184,148,0.3);
+    border-radius: 20px;
+    font-size: 12px;
+    color: var(--success);
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+
+  #result-video {
+    width: 100%;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    max-height: 420px;
+    background: #000;
+  }
+
+  .result-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  /* Video info bar */
+  .video-info-bar {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 18px;
+    margin-top: -6px;
+  }
+
+  .info-item {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+  }
+
+  .info-item .info-key { color: var(--muted); }
+  .info-item .info-val { color: var(--accent3); font-weight: 500; }
+
+  #video-file-input { display: none; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">💧</div>
+    WaterDrop
+  </div>
+  <div class="header-right">
+    <div class="badge badge-green">Browser Only</div>
+    <div class="badge">Free</div>
+  </div>
+</header>
+
+<main>
+  <div class="hero">
+    <div class="hero-tag">✦ 100% Client-Side Processing</div>
+    <h1>Remove <span>Watermarks</span><br>From Any Video</h1>
+    <p>Upload your video, select the watermark area, choose a removal method, and download — all inside your browser. No uploads to any server.</p>
+  </div>
+
+  <!-- Steps indicator -->
+  <div class="steps" id="steps-bar">
+    <div class="step active" id="step1"><div class="step-num">1</div> Upload</div>
+    <div class="step-arrow">→</div>
+    <div class="step" id="step2"><div class="step-num">2</div> Select Area</div>
+    <div class="step-arrow">→</div>
+    <div class="step" id="step3"><div class="step-num">3</div> Remove</div>
+    <div class="step-arrow">→</div>
+    <div class="step" id="step4"><div class="step-num">4</div> Download</div>
+  </div>
+
+  <!-- Upload Zone -->
+  <div id="upload-zone">
+    <span class="upload-icon">🎬</span>
+    <h3>Drop Your Video Here</h3>
+    <p>or click to browse files</p>
+    <div class="upload-formats">
+      <span class="format-chip">MP4</span>
+      <span class="format-chip">WebM</span>
+      <span class="format-chip">MOV</span>
+      <span class="format-chip">AVI</span>
+      <span class="format-chip">MKV</span>
+    </div>
+    <label class="upload-btn" for="video-file-input">📂 Choose File</label>
+    <input type="file" id="video-file-input" accept="video/*">
+  </div>
+
+  <!-- Video Info Bar (hidden until video loaded) -->
+  <div class="video-info-bar" id="video-info-bar" style="display:none">
+    <div class="info-item"><span class="info-key">File: </span><span class="info-val" id="info-name">—</span></div>
+    <div class="info-item"><span class="info-key">Size: </span><span class="info-val" id="info-size">—</span></div>
+    <div class="info-item"><span class="info-key">Duration: </span><span class="info-val" id="info-dur">—</span></div>
+    <div class="info-item"><span class="info-key">Resolution: </span><span class="info-val" id="info-res">—</span></div>
+  </div>
+
+  <!-- Editor -->
+  <div id="editor-area">
+    <div class="video-canvas-wrapper" id="video-wrapper">
+      <video id="video-el" controls></video>
+      <canvas id="selection-canvas"></canvas>
+      <div class="selection-indicator" id="sel-indicator">
+        <div class="sel-corner tl"></div>
+        <div class="sel-corner tr"></div>
+        <div class="sel-corner bl"></div>
+        <div class="sel-corner br"></div>
+      </div>
+    </div>
+
+    <div class="controls-row">
+      <!-- Left panel: coordinates + method -->
+      <div class="panel info-panel">
+        <div class="panel-title">Selected Area</div>
+        <div class="coords" id="coords-display">Click and drag on the video to select the watermark area</div>
+
+        <div style="margin-top:18px;">
+          <div class="panel-title">Removal Method</div>
+          <div class="method-grid">
+            <button class="method-btn" data-method="inpaint">
+              <span class="method-icon">🎨</span>
+              Smart Fill
+              <span class="method-label">Blend with surroundings</span>
+            </button>
+            <button class="method-btn selected" data-method="blur">
+              <span class="method-icon">🌫️</span>
+              Blur
+              <span class="method-label">Heavy gaussian blur</span>
+            </button>
+            <button class="method-btn" data-method="black">
+              <span class="method-icon">⬛</span>
+              Black Box
+              <span class="method-label">Fill with solid black</span>
+            </button>
+            <button class="method-btn" data-method="pixelate">
+              <span class="method-icon">🔲</span>
+              Pixelate
+              <span class="method-label">Mosaic/censor effect</span>
+            </button>
+          </div>
+
+          <div class="slider-row">
+            <span class="slider-label">Intensity</span>
+            <input type="range" id="intensity-slider" min="1" max="10" value="6">
+            <span class="slider-val" id="intensity-val">6</span>
+          </div>
+        </div>
+
+        <div class="status-msg" id="status-msg"></div>
+      </div>
+
+      <!-- Right panel: actions -->
+      <div class="actions-panel">
+        <button class="action-btn btn-primary" id="process-btn" disabled>
+          ⚡ Remove Watermark
+        </button>
+        <button class="action-btn btn-secondary" id="preview-btn" disabled>
+          👁 Preview Frame
+        </button>
+        <button class="action-btn btn-danger" id="clear-sel-btn">
+          🗑 Clear Selection
+        </button>
+        <button class="reset-link" id="reset-btn">← Upload Different Video</button>
+      </div>
+    </div>
+
+    <div class="tip-box">
+      <span class="tip-icon">💡</span>
+      <div><strong>How to select:</strong> Pause the video, then <strong>click and drag</strong> directly over the watermark area. For best results, select tightly around the watermark. Use <strong>Smart Fill</strong> for the most natural-looking result.</div>
+    </div>
+  </div>
+
+  <!-- Progress -->
+  <div id="progress-wrap">
+    <div class="progress-header">
+      <div>
+        <div class="progress-title">Processing Video...</div>
+        <span id="prog-label">Getting ready...</span>
+      </div>
+      <div id="prog-pct">0%</div>
+    </div>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill" id="prog-fill"></div>
+    </div>
+    <div class="progress-tips">
+      <span class="progress-tip-chip">🔒 All processing local</span>
+      <span class="progress-tip-chip">📡 No data uploaded</span>
+      <span class="progress-tip-chip" id="prog-fps-chip">⏱ Estimating time...</span>
+    </div>
+  </div>
+
+  <!-- Result -->
+  <div id="result-area">
+    <div class="result-badge">✅ Watermark Removed Successfully</div>
+    <p style="color:var(--muted); font-size:13px; margin-bottom:16px;">Preview your video and download it below</p>
+    <video id="result-video" controls></video>
+    <div class="result-actions">
+      <button class="action-btn btn-success" id="download-btn">⬇️ Download Video</button>
+      <button class="action-btn btn-secondary" id="try-again-btn">🔄 Try Again</button>
+      <button class="action-btn btn-secondary" id="new-video-btn">🎬 New Video</button>
+    </div>
+  </div>
+</main>
+
+<script>
+const uploadZone = document.getElementById('upload-zone');
+const fileInput = document.getElementById('video-file-input');
+const editorArea = document.getElementById('editor-area');
+const videoEl = document.getElementById('video-el');
+const canvas = document.getElementById('selection-canvas');
+const ctx = canvas.getContext('2d');
+const selIndicator = document.getElementById('sel-indicator');
+const coordsDisplay = document.getElementById('coords-display');
+const processBtn = document.getElementById('process-btn');
+const previewBtn = document.getElementById('preview-btn');
+const clearSelBtn = document.getElementById('clear-sel-btn');
+const resetBtn = document.getElementById('reset-btn');
+const progressWrap = document.getElementById('progress-wrap');
+const resultArea = document.getElementById('result-area');
+const resultVideo = document.getElementById('result-video');
+const downloadBtn = document.getElementById('download-btn');
+const tryAgainBtn = document.getElementById('try-again-btn');
+const newVideoBtn = document.getElementById('new-video-btn');
+const statusMsg = document.getElementById('status-msg');
+const intensitySlider = document.getElementById('intensity-slider');
+const intensityVal = document.getElementById('intensity-val');
+const videoInfoBar = document.getElementById('video-info-bar');
+
+let selection = null;
+let isDrawing = false;
+let startX, startY;
+let method = 'blur';
+let videoFile = null;
+let processStartTime = null;
+
+// Intensity slider
+intensitySlider.addEventListener('input', () => {
+  intensityVal.textContent = intensitySlider.value;
+});
+
+// Method buttons
+document.querySelectorAll('.method-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    method = btn.dataset.method;
+    // Re-preview if selection exists
+    if (selection) previewCurrentFrame();
+  });
+});
+
+// Drag & drop
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('video/')) loadVideo(f);
+  else statusMsg.textContent = 'Please drop a valid video file.';
+});
+
+fileInput.addEventListener('change', e => {
+  if (e.target.files[0]) loadVideo(e.target.files[0]);
+});
+
+uploadZone.addEventListener('click', (e) => {
+  if (e.target !== fileInput && !e.target.closest('label')) fileInput.click();
+});
+
+function loadVideo(file) {
+  videoFile = file;
+  const url = URL.createObjectURL(file);
+  videoEl.src = url;
+  uploadZone.style.display = 'none';
+  editorArea.classList.add('visible');
+  setStep(2);
+
+  videoEl.addEventListener('loadedmetadata', () => {
+    resizeCanvas();
+    // Show info bar
+    videoInfoBar.style.display = 'flex';
+    document.getElementById('info-name').textContent = file.name.length > 30 ? file.name.slice(0,30)+'…' : file.name;
+    document.getElementById('info-size').textContent = formatBytes(file.size);
+    document.getElementById('info-dur').textContent = formatDuration(videoEl.duration);
+    document.getElementById('info-res').textContent = `${videoEl.videoWidth} × ${videoEl.videoHeight}`;
+    statusMsg.textContent = `✓ Video loaded — now select the watermark area`;
+  }, { once: true });
+}
+
+function formatBytes(b) {
+  if (b > 1e9) return (b/1e9).toFixed(1) + ' GB';
+  if (b > 1e6) return (b/1e6).toFixed(1) + ' MB';
+  return (b/1e3).toFixed(0) + ' KB';
+}
+
+function formatDuration(s) {
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m}:${sec.toString().padStart(2,'0')}`;
+}
+
+function resizeCanvas() {
+  const rect = videoEl.getBoundingClientRect();
+  canvas.width = rect.width;
+  canvas.height = rect.height;
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
+}
+
+window.addEventListener('resize', () => { if (videoFile) { resizeCanvas(); if (selection) selIndicator.style.display = 'none'; selection = null; processBtn.disabled = true; previewBtn.disabled = true; }});
+
+// ─── SELECTION DRAWING ───
+canvas.addEventListener('mousedown', e => {
+  if (!videoEl.paused) videoEl.pause();
+  isDrawing = true;
+  selIndicator.style.display = 'none';
+  const r = canvas.getBoundingClientRect();
+  startX = e.clientX - r.left;
+  startY = e.clientY - r.top;
+});
+
+canvas.addEventListener('mousemove', e => {
+  if (!isDrawing) return;
+  const r = canvas.getBoundingClientRect();
+  const curX = e.clientX - r.left;
+  const curY = e.clientY - r.top;
+  const x = Math.min(startX, curX);
+  const y = Math.min(startY, curY);
+  const w = Math.abs(curX - startX);
+  const h = Math.abs(curY - startY);
+  selIndicator.style.display = 'block';
+  selIndicator.style.left = x + 'px';
+  selIndicator.style.top = y + 'px';
+  selIndicator.style.width = w + 'px';
+  selIndicator.style.height = h + 'px';
+});
+
+canvas.addEventListener('mouseup', e => {
+  if (!isDrawing) return;
+  isDrawing = false;
+  const r = canvas.getBoundingClientRect();
+  const endX = e.clientX - r.left;
+  const endY = e.clientY - r.top;
+  const x = Math.min(startX, endX);
+  const y = Math.min(startY, endY);
+  const w = Math.abs(endX - startX);
+  const h = Math.abs(endY - startY);
+
+  if (w < 8 || h < 8) {
+    coordsDisplay.textContent = 'Selection too small — drag a bigger area';
+    selection = null;
+    processBtn.disabled = true;
+    previewBtn.disabled = true;
+    return;
+  }
+
+  const scaleX = videoEl.videoWidth / canvas.width;
+  const scaleY = videoEl.videoHeight / canvas.height;
+
+  selection = {
+    x: Math.round(x * scaleX), y: Math.round(y * scaleY),
+    w: Math.round(w * scaleX), h: Math.round(h * scaleY),
+    dx: x, dy: y, dw: w, dh: h
+  };
+
+  coordsDisplay.innerHTML = `X: ${selection.x}px &nbsp; Y: ${selection.y}px<br>Width: ${selection.w}px &nbsp; Height: ${selection.h}px`;
+  processBtn.disabled = false;
+  previewBtn.disabled = false;
+  setStep(3);
+  statusMsg.textContent = `✓ Area selected — click "Remove Watermark" to process`;
+  previewCurrentFrame();
+});
+
+// Touch support
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const t = e.touches[0];
+  const r = canvas.getBoundingClientRect();
+  if (!videoEl.paused) videoEl.pause();
+  isDrawing = true;
+  startX = t.clientX - r.left;
+  startY = t.clientY - r.top;
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (!isDrawing) return;
+  const t = e.touches[0];
+  const r = canvas.getBoundingClientRect();
+  const curX = t.clientX - r.left;
+  const curY = t.clientY - r.top;
+  const x = Math.min(startX, curX);
+  const y = Math.min(startY, curY);
+  selIndicator.style.display = 'block';
+  selIndicator.style.left = x + 'px';
+  selIndicator.style.top = y + 'px';
+  selIndicator.style.width = Math.abs(curX - startX) + 'px';
+  selIndicator.style.height = Math.abs(curY - startY) + 'px';
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  const touch = e.changedTouches[0];
+  const fakeUp = new MouseEvent('mouseup', { clientX: touch.clientX, clientY: touch.clientY });
+  canvas.dispatchEvent(fakeUp);
+}, { passive: false });
+
+clearSelBtn.addEventListener('click', () => {
+  selection = null;
+  selIndicator.style.display = 'none';
+  coordsDisplay.textContent = 'Click and drag on the video to select the watermark area';
+  processBtn.disabled = true;
+  previewBtn.disabled = true;
+  statusMsg.textContent = '';
+});
+
+resetBtn.addEventListener('click', resetAll);
+newVideoBtn.addEventListener('click', resetAll);
+
+// ─── PREVIEW FRAME ───
+previewBtn.addEventListener('click', previewCurrentFrame);
+
+function previewCurrentFrame() {
+  if (!selection) return;
+  const previewCanvas = document.createElement('canvas');
+  previewCanvas.width = videoEl.videoWidth;
+  previewCanvas.height = videoEl.videoHeight;
+  const pCtx = previewCanvas.getContext('2d');
+  pCtx.drawImage(videoEl, 0, 0);
+  applyEffect(pCtx, selection.x, selection.y, selection.w, selection.h, method);
+
+  // Show as overlay image on canvas
+  const img = new Image();
+  img.onload = () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    // Redraw selection indicator
+    selIndicator.style.display = 'block';
+    selIndicator.style.left = selection.dx + 'px';
+    selIndicator.style.top = selection.dy + 'px';
+    selIndicator.style.width = selection.dw + 'px';
+    selIndicator.style.height = selection.dh + 'px';
+    statusMsg.textContent = '👁 Preview active — this is what the processed frame looks like';
+    setTimeout(() => { ctx.clearRect(0, 0, canvas.width, canvas.height); }, 3000);
+  };
+  img.src = previewCanvas.toDataURL();
+}
+
+function resetAll() {
+  uploadZone.style.display = '';
+  editorArea.classList.remove('visible');
+  progressWrap.classList.remove('visible');
+  resultArea.classList.remove('visible');
+  videoInfoBar.style.display = 'none';
+  selection = null;
+  selIndicator.style.display = 'none';
+  videoEl.src = '';
+  resultVideo.src = '';
+  fileInput.value = '';
+  videoFile = null;
+  processBtn.disabled = true;
+  previewBtn.disabled = true;
+  coordsDisplay.textContent = 'Click and drag on the video to select the watermark area';
+  statusMsg.textContent = '';
+  setStep(1);
+}
+
+// ─── MAIN PROCESSING ───
+processBtn.addEventListener('click', async () => {
+  if (!selection || !videoFile) return;
+  editorArea.classList.remove('visible');
+  videoInfoBar.style.display = 'none';
+  progressWrap.classList.add('visible');
+  processStartTime = Date.now();
+  setStep(3);
+
+  try {
+    const resultUrl = await processVideo();
+    progressWrap.classList.remove('visible');
+    resultVideo.src = resultUrl;
+    resultArea.classList.add('visible');
+    setStep(4);
+
+    downloadBtn.onclick = () => {
+      const a = document.createElement('a');
+      a.href = resultUrl;
+      const ext = 'webm';
+      const baseName = videoFile.name.replace(/\.[^.]+$/, '');
+      a.download = `${baseName}_no_watermark.${ext}`;
+      a.click();
+    };
+  } catch (err) {
+    progressWrap.classList.remove('visible');
+    editorArea.classList.add('visible');
+    videoInfoBar.style.display = 'flex';
+    statusMsg.textContent = '❌ Error: ' + err.message;
+    console.error(err);
+  }
+});
+
+async function processVideo() {
+  return new Promise(async (resolve, reject) => {
+    const vid = document.createElement('video');
+    vid.src = URL.createObjectURL(videoFile);
+    vid.muted = true;
+    vid.crossOrigin = 'anonymous';
+    await new Promise(r => { vid.onloadedmetadata = r; });
+
+    const VW = vid.videoWidth;
+    const VH = vid.videoHeight;
+    const FPS = 25;
+    const duration = vid.duration;
+    const totalFrames = Math.ceil(duration * FPS);
+
+    const offCanvas = document.createElement('canvas');
+    offCanvas.width = VW;
+    offCanvas.height = VH;
+    const offCtx = offCanvas.getContext('2d');
+
+    const stream = offCanvas.captureStream(FPS);
+    let mediaRecorder;
+    const mimeTypes = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+    for (const mime of mimeTypes) {
+      if (MediaRecorder.isTypeSupported(mime)) {
+        try { mediaRecorder = new MediaRecorder(stream, { mimeType: mime }); break; } catch {}
+      }
+    }
+    if (!mediaRecorder) mediaRecorder = new MediaRecorder(stream);
+
+    const chunks = [];
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(chunks, { type: 'video/webm' });
+      resolve(URL.createObjectURL(blob));
+    };
+
+    mediaRecorder.start(100);
+
+    let frameCount = 0;
+    const { x, y, w, h } = selection;
+    const intensity = parseInt(intensitySlider.value);
+
+    function renderFrame() {
+      offCtx.drawImage(vid, 0, 0, VW, VH);
+      applyEffect(offCtx, x, y, w, h, method, intensity);
+      frameCount++;
+      updateProgress(frameCount, totalFrames);
+    }
+
+    async function processFrames() {
+      for (let i = 0; i < totalFrames; i++) {
+        const time = i / FPS;
+        if (time > duration) break;
+        await seekTo(vid, time);
+        renderFrame();
+        if (i % 8 === 0) await sleep(0);
+      }
+      mediaRecorder.stop();
+    }
+
+    processFrames().catch(reject);
+  });
+}
+
+function seekTo(vid, time) {
+  return new Promise(resolve => { vid.currentTime = time; vid.onseeked = resolve; });
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function updateProgress(current, total) {
+  const pct = Math.round((current / total) * 100);
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('prog-pct').textContent = pct + '%';
+  document.getElementById('prog-label').textContent = `Frame ${current} of ${total} — ${method} method`;
+
+  if (current > 10 && processStartTime) {
+    const elapsed = (Date.now() - processStartTime) / 1000;
+    const fps = current / elapsed;
+    const remaining = (total - current) / fps;
+    document.getElementById('prog-fps-chip').textContent = `⏱ ~${Math.ceil(remaining)}s left`;
+  }
+}
+
+// ─── EFFECT ENGINE ───
+function applyEffect(ctx, x, y, w, h, method, intensity = 6) {
+  switch (method) {
+    case 'blur': {
+      const blurAmount = 4 + intensity * 2; // 6–24px
+      // Multi-pass blur using downscale trick
+      const tmp = document.createElement('canvas');
+      tmp.width = w; tmp.height = h;
+      const tCtx = tmp.getContext('2d');
+      tCtx.drawImage(ctx.canvas, x, y, w, h, 0, 0, w, h);
+
+      // Downscale → upscale for strong blur
+      const scale = Math.max(1, Math.floor(blurAmount / 4));
+      const small = document.createElement('canvas');
+      small.width = Math.max(1, Math.floor(w / scale));
+      small.height = Math.max(1, Math.floor(h / scale));
+      const sCtx = small.getContext('2d');
+      sCtx.drawImage(tmp, 0, 0, small.width, small.height);
+
+      ctx.save();
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(small, 0, 0, small.width, small.height, x, y, w, h);
+      ctx.restore();
+
+      // Additional CSS filter blur pass
+      ctx.save();
+      ctx.filter = `blur(${Math.floor(blurAmount/2)}px)`;
+      ctx.drawImage(ctx.canvas, x, y, w, h, x - 2, y - 2, w + 4, h + 4);
+      ctx.filter = 'none';
+      ctx.restore();
+      break;
+    }
+
+    case 'black': {
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(x, y, w, h);
+      break;
+    }
+
+    case 'inpaint': {
+      // Smart inpainting: sample from edges (top, bottom, left, right borders)
+      // and reconstruct a plausible background by averaging edge pixels
+      try {
+        const border = Math.max(3, Math.min(20, Math.floor(Math.min(w, h) * 0.25)));
+        const imgData = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
+        const data = imgData.data;
+        const cw = ctx.canvas.width;
+
+        // Sample top and bottom strips outside the watermark
+        const topY = Math.max(0, y - border);
+        const botY = Math.min(ctx.canvas.height - 1, y + h + border);
+
+        function getPixel(px, py) {
+          if (px < 0 || py < 0 || px >= cw || py >= ctx.canvas.height) return null;
+          const i = (py * cw + px) * 4;
+          return [data[i], data[i+1], data[i+2]];
+        }
+
+        // Fill each pixel in the watermark region using bilinear interpolation from surroundings
+        for (let py = y; py < y + h; py++) {
+          for (let px = x; px < x + w; px++) {
+            // Weight by distance from borders
+            const tx = (px - x) / w; // 0..1 left to right
+            const ty = (py - y) / h; // 0..1 top to bottom
+
+            // Sample from 4 edges
+            const topPx = getPixel(px, Math.max(0, y - 1));
+            const botPx = getPixel(px, Math.min(ctx.canvas.height - 1, y + h));
+            const leftPx = getPixel(Math.max(0, x - 1), py);
+            const rightPx = getPixel(Math.min(cw - 1, x + w), py);
+
+            const samples = [topPx, botPx, leftPx, rightPx].filter(Boolean);
+            if (samples.length === 0) continue;
+
+            // Weighted blend: closer to an edge = more weight from that edge
+            const wTop = topPx ? (1 - ty) : 0;
+            const wBot = botPx ? ty : 0;
+            const wLeft = leftPx ? (1 - tx) : 0;
+            const wRight = rightPx ? tx : 0;
+            const totalW = wTop + wBot + wLeft + wRight || 1;
+
+            let r = 0, g = 0, b = 0;
+            if (topPx)   { r += topPx[0]*wTop;   g += topPx[1]*wTop;   b += topPx[2]*wTop; }
+            if (botPx)   { r += botPx[0]*wBot;   g += botPx[1]*wBot;   b += botPx[2]*wBot; }
+            if (leftPx)  { r += leftPx[0]*wLeft;  g += leftPx[1]*wLeft;  b += leftPx[2]*wLeft; }
+            if (rightPx) { r += rightPx[0]*wRight; g += rightPx[1]*wRight; b += rightPx[2]*wRight; }
+
+            const idx = (py * cw + px) * 4;
+            data[idx]   = Math.round(r / totalW);
+            data[idx+1] = Math.round(g / totalW);
+            data[idx+2] = Math.round(b / totalW);
+          }
+        }
+        ctx.putImageData(imgData, 0, 0);
+      } catch (e) {
+        // Fallback to color fill
+        ctx.fillStyle = '#888';
+        ctx.fillRect(x, y, w, h);
+      }
+      break;
+    }
+
+    case 'pixelate': {
+      const pixelSize = Math.max(4, Math.floor((intensity * 1.5)));
+      ctx.save();
+      ctx.imageSmoothingEnabled = false;
+      const pw = Math.max(1, Math.floor(w / pixelSize));
+      const ph = Math.max(1, Math.floor(h / pixelSize));
+      const tmp2 = document.createElement('canvas');
+      tmp2.width = pw; tmp2.height = ph;
+      const t2 = tmp2.getContext('2d');
+      t2.imageSmoothingEnabled = false;
+      t2.drawImage(ctx.canvas, x, y, w, h, 0, 0, pw, ph);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(tmp2, 0, 0, pw, ph, x, y, w, h);
+      ctx.restore();
+      break;
+    }
+  }
+}
+
+function setStep(n) {
+  for (let i = 1; i <= 4; i++) {
+    const el = document.getElementById('step' + i);
+    el.className = 'step';
+    if (i < n) el.classList.add('done');
+    else if (i === n) el.classList.add('active');
+    el.querySelector('.step-num').textContent = i < n ? '✓' : i;
+  }
+}
+</script>
+</body>
+</html>
